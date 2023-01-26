@@ -24,7 +24,7 @@ Example usage at the python prompt:
 >>> import numpy as np
 >>> x = np.arange(0, 100*24*3.6e6, 3.6e6) # UNIX timestamps in milliseconds
 >>> y1 = np.random.random(x.size) # first random timeseries
->>> y2 = np.ra6ndom.random(x.size) # second random timeseries
+>>> y2 = np.random.random(x.size) # second random timeseries
 >>> ritmo = Ritmo(y1 = y1, y2 = y2, x1 = x)
 >>> ritmo.run()
 ```
