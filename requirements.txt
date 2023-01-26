@@ -1,3 +1,8 @@
-pandas>=1.1
-matplotlib>=2.2
-pyEDM>=??
+pandas>=1.3.0
+matplotlib>=3.5.1
+numpy>=1.21.0
+pyEDM==1.14.0.0
+pymannkendall==1.4.3
+pycwt==0.3.0a22
+sklearn==0.0.post2
+scikit-learn==1.0.2

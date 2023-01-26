@@ -1,0 +1,6 @@
+results/
+build/
+dist/
+__pycache__/
+*.egg-info/
+temp.csv
