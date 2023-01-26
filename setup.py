@@ -10,7 +10,7 @@ URL = 'https://github.com/rachel-stirling/RITMO'
 EMAIL = 'rachelstirling1@gmail.com'
 AUTHOR = 'Rachel E. Stirling'
 REQUIRES_PYTHON = '>=3.7.0'
-VERSION = '1.1.1'
+VERSION = '1.2.0'
 
 install_requires = [
     'pandas==1.3.5', 'matplotlib==3.5.3', 'numpy==1.21.6', 'pyEDM==1.14.0.0',

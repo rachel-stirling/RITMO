@@ -2,21 +2,21 @@ import os
 import pyEDM as EDM
 import pandas as pd
 import numpy as np
+import pathlib
 
 
-def edm_ccm(y1, y2, path='.'):
+def edm_ccm(y1, y2, path=pathlib.Path(__file__).parent.resolve()):
     """Run EDM CCM via pyEDM module"""
     df = pd.DataFrame({'y1': y1[1:-1], 'y2': y2[1:-1]})
     df['time'] = np.arange(1, len(df) + 1, 1)
     df = df.set_index('time')
-    df.to_csv(os.path.join(path, "ritmo", "edm", "temp.csv"))
+    df.to_csv(os.path.join(path, "temp.csv"))
 
     edm_results = []
     for column, target in zip(['y1', 'y2'], ['y2', 'y1']):
 
         # Determine embedding dimension
-        rho = EDM.EmbedDimension(dataFile=os.path.join(path, "ritmo", "edm",
-                                                       "temp.csv"),
+        rho = EDM.EmbedDimension(dataFile=os.path.join(path, "temp.csv"),
                                  columns=column,
                                  target=target,
                                  Tp=-1,
@@ -31,8 +31,7 @@ def edm_ccm(y1, y2, path='.'):
 
         # Run EDM module
         lib_size = f"{max(embedding_dimension, 3)} {len(df) - embedding_dimension} 1"
-        edm_result = EDM.CCM(dataFile=os.path.join(path, "ritmo", "edm",
-                                                   "temp.csv"),
+        edm_result = EDM.CCM(dataFile=os.path.join(path, "temp.csv"),
                              E=embedding_dimension,
                              Tp=0,
                              columns=column,
