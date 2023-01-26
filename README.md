@@ -32,5 +32,3 @@ Example usage at the python prompt:
 ---
 
 ### References
-
-Stirling et al. 2022. A methodology to assess cyclical correlates: case study of the heart and the epileptic brain.
