@@ -29,6 +29,14 @@ Example usage at the python prompt:
 >>> ritmo.run()
 ```
 
+To run individual modules:
+
+```python
+>>> ritmo.run_edm() # Empirical dynamical modelling module
+>>> ritmo.run_plv() # Phase locking value module
+>>> ritmo.run_mutual_information() # Mutual information module
+```
+
 ---
 
 ## Releasing

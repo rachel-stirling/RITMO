@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 
 from ritmo.constants import ALPHA, MIN_DAYS, N_SURROGATES
-from ritmo.cycles import choose_filter_cutoffs, filter_cycles, find_overlapping_peaks, morlet_wavelet
+from ritmo.cycles import (choose_filter_cutoffs, filter_cycles,
+                          find_overlapping_peaks, morlet_wavelet)
 from ritmo.edm.figure import edm_figure
 from ritmo.edm.edm import edm_ccm, generate_edm_surrogate
 from ritmo.edm.statistics import edm_statistics
@@ -19,7 +20,30 @@ tsrs_vtype = Sequence[float]
 
 class Ritmo:
     """
-    Ritmo class forms the basis of all functions within the module.
+    Ritmo class forms the basis of all functions
+    (phase locking value, mutual information and empirical dynamic modelling)
+    within the module
+    Ritmo().run() will run all modules
+
+    Parameters
+    ------------
+        y1: numpy array of float or int
+            Array of values for first timeseries
+        y2: numpy array of float or int
+            Array of values for second timeseries
+        x1: numpy array of float or int
+            Array of UNIX timestamps associated with y1 values
+        x2: numpy array of float or int (default = None)
+            Array of UNIX timestamps associated with y2 values
+            If set to None, x2 is set to x1
+        save_path: str (default = '.')
+            Path to save results and plots
+            If not set, default stores results and plots in current working directory.
+        dataset_name: str (default = None)
+            Name of dataset; dictates how files will be stored.
+            If set to None, UUID for the dataset will be generated.
+        save_plots: bool (default = True)
+            Whether to save plots or not
     """
     def __init__(self,
                  y1: tsrs_vtype,
@@ -28,7 +52,7 @@ class Ritmo:
                  x2: Optional[tsrs_vtype] = None,
                  save_path: str = '.',
                  dataset_name: Optional[str] = None,
-                 save_plots: bool = True):
+                 save_plots: bool = True) -> None:
 
         if dataset_name is None:
             dataset_name = str(uuid.uuid4())
@@ -232,8 +256,9 @@ class Ritmo:
                 value2 = self.tsrs_2_filtered[f'{i}_value'].to_numpy()
                 mi_vals = stats_shifted(value1, value2, lags=lags)
                 mi_random = stats_random(self.filtered_noise, peak1, i)
-                plot_mutual_information(peak1, i, mi_vals, lags, mi_random,
-                                        self.save_path)
+                if self.save_plots:
+                    plot_mutual_information(peak1, i, mi_vals, lags, mi_random,
+                                            self.save_path)
                 mi_all_cycles[(peak1, i)] = (mi_vals, lags, mi_random)
 
         return mi_all_cycles
