@@ -1,4 +1,4 @@
-## Research Investigation of Timeseries with Multiday Oscillations (RITMO)
+## Rhythmic Investigation of Timeseries with Multiday Oscillations (RITMO)
 
 ---
 This package provides a python toolbox for assessing the slow-drifting correlation and causation between two oscialltory timeseries' with multiday patterns. It includes three well-estabilised approaches:
