@@ -61,7 +61,6 @@ def resample_df(args):
 def process_data(x, y, freq):
     """Resamples, interpolates and standardises timeseries data"""
     data = pd.DataFrame({'timestamp': x, 'value': y})
-
     vals = np.linspace(0, len(data), 100).astype(int)
     split_data = [(data.loc[i:j - 1], freq)
                   for i, j in zip(vals[:-1], vals[1:])]
@@ -72,7 +71,7 @@ def process_data(x, y, freq):
         dfs = [resample_df(data) for data in split_data]
     df = pd.concat(dfs)
 
-    # interpolate
+    # interpolate missing values with mean of timeseries
     df = df.drop_duplicates(subset='timestamp', keep='first')
     df.loc[pd.isnull(df['value']), 'value'] = df['value'].mean()
 

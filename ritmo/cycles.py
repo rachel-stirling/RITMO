@@ -38,22 +38,35 @@ def morlet_wavelet(df: pd.DataFrame):
     samples_per_hr = 1
     dt = 1 / samples_per_hr
     y = df['value'].to_numpy()
-    wave, _, freqs, _, _, _ = cwt.cwt(signal=y,
-                                      dt=dt,
-                                      wavelet=cwt.Morlet(6),
-                                      freqs=freqs)
+    wave, scales, freqs, _, _, _ = cwt.cwt(signal=y,
+                                           dt=dt,
+                                           wavelet=cwt.Morlet(6),
+                                           freqs=freqs)
     period = 1 / freqs
     power = np.abs(wave)**2
     glbl_power = power.mean(axis=1)
     var = y.std()**2
+    alpha = cwt.ar1(y)[0]  # np.corrcoef(y[1:], y[:-1])[0][1]
+    glbl_signif, _ = cwt.significance(signal=var,
+                                      dt=dt,
+                                      scales=scales,
+                                      sigma_test=1,
+                                      alpha=alpha,
+                                      significance_level=0.95,
+                                      dof=y.size - scales,
+                                      wavelet=cwt.Morlet(6))
 
     # Find peaks that are significant
-    peaks = [period[i] for i in scipy.signal.find_peaks(var * glbl_power)[0]]
+    ind_peaks = scipy.signal.find_peaks(var * glbl_power)[0]
+    higher_than_sig_level = [var * glbl_power > glbl_signif][0]
+    peaks = np.array(
+        list(set(period[i] for i in ind_peaks if higher_than_sig_level[i])))
 
     wavelet_df = pd.DataFrame({
         "period": period,
         "power": var * glbl_power,
-        "peak": [1 if i in peaks else 0 for i in period]
+        "peak": [1 if i in peaks else 0 for i in period],
+        "significance": glbl_signif
     })
 
     return wavelet_df, peaks

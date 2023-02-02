@@ -6,3 +6,4 @@ __pycache__/
 temp.csv
 MANIFEST.in
 .DS_Store
+temp.py

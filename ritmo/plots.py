@@ -5,7 +5,7 @@ import pandas as pd
 
 from ritmo.utils import norm
 
-WAVELET_XTICKS = [24, 7 * 24, 14 * 24, 30 * 74, 60 * 24, 90 * 24]
+WAVELET_XTICKS = [24, 7 * 24, 14 * 24, 30 * 24, 60 * 24, 90 * 24]
 WAVELET_XTICK_LABELS = ['24h', '7d', '14d', '30d', '60d', '90d']
 
 
@@ -51,7 +51,8 @@ def timeseries_plot(df1: pd.DataFrame, df2: pd.DataFrame, save_loc: str):
     ax[1].plot(df2_7d['timestamp'], df2_7d['value'], 'red')
 
     ax[1].xaxis.set_major_locator(MonthLocator())
-    ax[1].xaxis.set_major_formatter(DateFormatter('%b %Y'))
+    ax[1].xaxis.set_major_formatter(DateFormatter('%b %y'))
+    ax[1].xaxis.set_tick_params(rotation=90, labelsize=6)
     ax[0].spines[['top', 'right']].set_visible(False)
     ax[1].spines[['top', 'right']].set_visible(False)
 
@@ -75,12 +76,16 @@ def wavelet_plot(df1: pd.DataFrame, df2: pd.DataFrame, overlapping_cycles,
     _, ax = plt.subplots()
 
     x1 = df1['period'].to_list()
-    y1 = norm(df1['power']).tolist()
+    y1 = df1['power'].tolist()
     x2 = df2['period'].to_list()
-    y2 = norm(df2['power']).tolist()
+    y2 = df2['power'].tolist()
+    sig1 = df1["significance"].to_list()
+    sig2 = df2["significance"].to_list()
 
     ax.plot(x1, y1, 'navy', label='X1 wavelet', linewidth=2)
     ax.plot(x2, y2, 'red', label='X2 wavelet', linewidth=2)
+    ax.plot(x1, sig1, 'navy', linewidth=1, linestyle='--')
+    ax.plot(x2, sig2, 'red', linewidth=1, linestyle='--')
 
     # plot overlapping cycles
     k = 0
@@ -94,20 +99,24 @@ def wavelet_plot(df1: pd.DataFrame, df2: pd.DataFrame, overlapping_cycles,
             ax.scatter([x1_pk] + x2_pk, x1_height, c=colours[k])
             k += 1
 
+    y_max = max(sig1 + sig2 + y1 + y2) * 1.1
     ax.set_xlim([max(min(x1), min(x2)), min(max(x1), max(x2))])
-    ax.set_ylim([0, 1.1])
+    ax.set_ylim([0, y_max])
     ax.set_xscale('log')
     ax.yaxis.set_ticks([])
     ax.xaxis.set_ticks([])
     ax.spines[['top', 'right']].set_visible(False)
     ax.set_xticks([], minor=True)
-    ax.set_yticks([0, 1])
+    ax.set_yticks([0, int(y_max / 2), int(y_max)])
     xticks = [i for i in WAVELET_XTICKS if i < min(max(x1), max(x2))]
     ax.set_xticks(xticks)
     ax.set_xticklabels(WAVELET_XTICK_LABELS[:len(xticks)], fontweight='bold')
-    ax.set_yticklabels([0, 1])
+    # ax.set_yticklabels([0, 1])
     ax.set_ylabel("Power", fontsize=10)
-    ax.legend(fontsize=8, loc='upper right', bbox_to_anchor=(1, 1.05), ncol=2)
+    ax.legend(fontsize=8,
+              loc='upper right',
+              bbox_to_anchor=(0.5, 1.05),
+              ncol=2)
 
     # plt.subplots_adjust(hspace=0.5)
     plt.savefig(os.path.join(save_loc, "figures", "wavelet.png"),
@@ -128,7 +137,9 @@ def plot_phase_synchony(filt1, filt2, pk1, pk2, phase_synchrony, PLV, sig,
     ax[1].set_title(f'Phase synchrony with PLV = {PLV:.3}{sig}')
     ax[1].plot(filt1['timestamp'], phase_synchrony, 'k')
     ax[1].set_xlabel('Date')
-    ax[1].set_xticklabels(ax[1].get_xticklabels(), rotation=90)
+    ax[1].xaxis.set_major_locator(MonthLocator())
+    ax[1].xaxis.set_major_formatter(DateFormatter('%b %y'))
+    ax[1].xaxis.set_tick_params(rotation=90, labelsize=6)
     pk1, pk2 = round(pk1 / 24, 1), round(pk2 / 24, 1)
     plt.savefig(os.path.join(save_loc, "figures",
                              f"X1_{pk1}_X2_{pk2}_phase_synchrony.png"),

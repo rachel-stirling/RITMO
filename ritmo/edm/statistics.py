@@ -91,16 +91,16 @@ def edm_statistics(save_path: str, surrogates: bool):
 
     df = df.append(
         {
-            'Kendall y1-y2':
+            'Kendall X1-X2':
             f'{round(tau_y1_y2, 4)} ({round(p_y1_y2, 4)}{"*" if p_y1_y2<0.05 and tau_y1_y2 > 0 else ""})',
-            'Kendall y2-y1':
+            'Kendall X2-X1':
             f'{round(tau_y2_y1, 4)} ({round(p_y2_y1, 4)}{"*" if p_y2_y1<0.05 and tau_y2_y1 > 0 else ""})',
-            'Fisher y1-y2':
+            'Fisher X1-X2':
             f'{round(z_y1_y2, 4)} ({round(zp_y1_y2, 4)}{"*" if zp_y1_y2<0.05 else ""})',
-            'Fisher y2-y1':
+            'Fisher X2-X1':
             f'{round(z_y2_y1, 4)} ({round(zp_y2_y1, 4)}{"*" if zp_y2_y1<0.05 else ""})',
-            'Significant surrogate skill y1-y2': str(skill_above_surr_y1),
-            'Significant surrogate skill y2-y1': str(skill_above_surr_y2)
+            'Significant surrogate skill X1-X2': str(skill_above_surr_y1),
+            'Significant surrogate skill X2-X1': str(skill_above_surr_y2)
         },
         ignore_index=True)
 
