@@ -51,25 +51,39 @@ def norm(array, min_val=None, max_val=None):
 
 
 def resample_df(args):
-    """Resamples df at freq using mean method"""
-    df, freq = args
+    """
+    Resamples df at freq using specified method
+    Currently only set up for mean and sum methods
+    """
+    df, freq, method = args
     df.loc[:, 'timestamp'] = df['timestamp'].astype('datetime64[ms]')
-    return df.resample(freq, on='timestamp',
-                       label='right').mean().reset_index()
+    if method == 'mean':
+        return df.resample(freq, on='timestamp',
+                        label='right').mean().reset_index()
+    elif method == 'sum':
+        return df.resample(freq, on='timestamp',
+                label='right').sum().reset_index()
+    else:
+        raise TypeError(f"'{method}' method not set up in ritmo.utils.resample_df function")
 
 
-def process_data(x, y, freq):
+def process_data(x, y, freq, method):
     """Resamples, interpolates and standardises timeseries data"""
     data = pd.DataFrame({'timestamp': x, 'value': y})
-    vals = np.linspace(0, len(data), 100).astype(int)
-    split_data = [(data.loc[i:j - 1], freq)
-                  for i, j in zip(vals[:-1], vals[1:])]
-    if MULTIPROCESSING:
-        with Pool(10) as p:
-            dfs = p.map(resample_df, split_data)
-    else:
-        dfs = [resample_df(data) for data in split_data]
-    df = pd.concat(dfs)
+
+    try:
+        df = resample_df(data, freq, method)
+
+    except: # in case of timeout
+        vals = np.linspace(0, len(data), 100).astype(int)
+        split_data = [(data.loc[i:j - 1], freq, method)
+                    for i, j in zip(vals[:-1], vals[1:])]
+        if MULTIPROCESSING:
+            with Pool(10) as p:
+                dfs = p.map(resample_df, split_data)
+        else:
+            dfs = [resample_df(data) for data in split_data]
+        df = pd.concat(dfs)
 
     # interpolate missing values with mean of timeseries
     df = df.drop_duplicates(subset='timestamp', keep='first')

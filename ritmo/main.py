@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Sequence
+from typing import Optional, Sequence, List, Mapping
 import uuid
 
 import numpy as np
@@ -36,6 +36,10 @@ class Ritmo:
         x2: numpy array of float or int (default = None)
             Array of UNIX timestamps associated with y2 values
             If set to None, x2 is set to x1
+        resample_method: dictionary (default = None, which uses mean resample method)
+            Specified resampling methods for y1 and y2
+            e.g. {"y1": "mean", "y2": "sum"}
+            Currently only mean and sum methods are set up for resampling
         save_path: str (default = '.')
             Path to save results and plots
             If not set, default stores results and plots in current working directory.
@@ -50,6 +54,7 @@ class Ritmo:
                  y2: tsrs_vtype,
                  x1: tsrs_vtype,
                  x2: Optional[tsrs_vtype] = None,
+                 resample_method: Optional[Mapping[str, str]] = None,
                  save_path: str = '.',
                  dataset_name: Optional[str] = None,
                  save_plots: bool = True) -> None:
@@ -86,6 +91,16 @@ class Ritmo:
                 )
             setattr(self, var_name, var)
 
+        # check resampling methods
+        if resample_method is not None:
+            if not all(key in resample_method for key in ['y1', 'y2']):
+                raise TypeError(
+                    f"resample_method should be dict type with 'y1' and 'y2' as specified keys."
+                )
+            y1_rs, y2_rs = resample_method['y1'], resample_method['y2']
+        else:
+            y1_rs, y2_rs = ['mean'] * 2 # defaults to mean
+
         # check for x2
         if x2 is None:
             if y1.size != y2.size:
@@ -105,11 +120,11 @@ class Ritmo:
                 setattr(self, var_name, var[:, 0])
 
         # interpolation
-        self.tsrs_1 = process_data(self.x1, self.y1, freq='1H')
-        self.tsrs_2 = process_data(self.x2, self.y2, freq='1H')
+        self.tsrs_1 = process_data(self.x1, self.y1, freq='1H', method=y1_rs)
+        self.tsrs_2 = process_data(self.x2, self.y2, freq='1H', method=y2_rs)
         self._check_start_end_times()
 
-        if len(self.tsrs_1) < MIN_DAYS or len(self.tsrs_2) < MIN_DAYS:
+        if len(self.tsrs_1) < MIN_DAYS * 24 or len(self.tsrs_2) < MIN_DAYS * 24:
             raise ValueError(
                 f"Timeseries overlap is less than {MIN_DAYS} days.")
 
@@ -121,7 +136,6 @@ class Ritmo:
         """Runs all RITMO code and produces table"""
 
         # Run all RITMO methods
-        self.run_edm()
         plv_all_cycles = self.run_plv()
         mi_all_cycles = self.run_mutual_information()
 
@@ -156,6 +170,8 @@ class Ritmo:
                 ignore_index=True)
         table.to_csv(
             os.path.join(self.save_path, "results", "plv_mi_significance.csv"))
+
+        self.run_edm()
 
     def run_edm(self, surrogates: bool = True):
         """
