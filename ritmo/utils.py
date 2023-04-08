@@ -59,12 +59,14 @@ def resample_df(args):
     df.loc[:, 'timestamp'] = df['timestamp'].astype('datetime64[ms]')
     if method == 'mean':
         return df.resample(freq, on='timestamp',
-                        label='right').mean().reset_index()
+                           label='right').mean().reset_index()
     elif method == 'sum':
         return df.resample(freq, on='timestamp',
-                label='right').sum().reset_index()
+                           label='right').sum().reset_index()
     else:
-        raise TypeError(f"'{method}' method not set up in ritmo.utils.resample_df function")
+        raise TypeError(
+            f"'{method}' method not set up in ritmo.utils.resample_df function"
+        )
 
 
 def process_data(x, y, freq, method):
@@ -72,18 +74,21 @@ def process_data(x, y, freq, method):
     data = pd.DataFrame({'timestamp': x, 'value': y})
 
     try:
-        df = resample_df(data, freq, method)
+        df = resample_df((data, freq, method))
 
-    except: # in case of timeout
+    except TimeoutError:  # in case of timeout
         vals = np.linspace(0, len(data), 100).astype(int)
         split_data = [(data.loc[i:j - 1], freq, method)
-                    for i, j in zip(vals[:-1], vals[1:])]
+                      for i, j in zip(vals[:-1], vals[1:])]
         if MULTIPROCESSING:
             with Pool(10) as p:
                 dfs = p.map(resample_df, split_data)
         else:
             dfs = [resample_df(data) for data in split_data]
         df = pd.concat(dfs)
+        df = resample_df(
+            (df, freq, method
+             ))  # in case of missing data due to splitting then resampling
 
     # interpolate missing values with mean of timeseries
     df = df.drop_duplicates(subset='timestamp', keep='first')
