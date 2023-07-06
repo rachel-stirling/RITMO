@@ -39,7 +39,7 @@ def edm_figure(save_path: str, surrogates: bool, variable_names: Tuple[str,
                                     int(x1.max()))
         z_5, z_95 = confidence_vals(surr[1], 'y2:y1', int(x2.min()),
                                     int(x2.max()))
-        all_vals = y_95 + y + z_95 + z
+        all_vals = y_95 + y.to_list() + z_95 + z.to_list()
         y_min = min(all_vals)
         y_max = max(all_vals)
     else:
