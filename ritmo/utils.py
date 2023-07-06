@@ -3,6 +3,7 @@ import os
 import pickle
 import numpy as np
 import pandas as pd
+import warnings
 
 from ritmo.constants import MULTIPROCESSING
 
@@ -56,7 +57,20 @@ def resample_df(args):
     Currently only set up for mean and sum methods
     """
     df, freq, method = args
-    df.loc[:, 'timestamp'] = df['timestamp'].astype('datetime64[ms]')
+    try:
+        df.loc[:, 'timestamp'] = df['timestamp'].astype('datetime64[ms]')
+    except pd.errors.OutOfBoundsDatetime as error:
+        print(
+            f"Timestamps given {df['timestamp'].iloc[0]}...{df['timestamp'].iloc[-1]}"
+            + " are not in milliseconds")
+        raise pd.errors.OutOfBoundsDatetime(error)
+
+    if df['timestamp'].iloc[0].year == 1970:
+        warnings.warn(
+            f"Timestamps convereted to {df['timestamp'].iloc[0]}..." +
+            f"{df['timestamp'].iloc[-1]}. Double check" +
+            " that timestamps are in milliseconds.")
+
     if method == 'mean':
         return df.resample(freq, on='timestamp',
                            label='right').mean().reset_index()
