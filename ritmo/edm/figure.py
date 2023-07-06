@@ -1,6 +1,7 @@
 import os
 from matplotlib import pyplot as plt
 import numpy as np
+from typing import Tuple
 
 from ritmo.utils import read_pickle
 
@@ -20,7 +21,8 @@ def confidence_vals(surr, col, min_lib, max_lib):
     return x_5, x_95
 
 
-def edm_figure(save_path: str, surrogates: bool):
+def edm_figure(save_path: str, surrogates: bool, variable_names: Tuple[str,
+                                                                       str]):
     """Create EDM CCM figure"""
     results_path = os.path.join(save_path, "results")
     [y1_xmap_y2,
@@ -37,14 +39,21 @@ def edm_figure(save_path: str, surrogates: bool):
                                     int(x1.max()))
         z_5, z_95 = confidence_vals(surr[1], 'y2:y1', int(x2.min()),
                                     int(x2.max()))
-        y_min = min(min(y_95), min(y), min(z_95), min(z))
-        y_max = max(max(y_95), max(y), max(z_95), max(z))
+        all_vals = y_95 + y + z_95 + z
+        y_min = min(all_vals)
+        y_max = max(all_vals)
     else:
         y_min, y_max = min(y.min(), z.min()) * 0.9, max(y.max(), z.max()) * 1.1
     x_min, x_max = min(x1.min(), x2.min()), max(x1.max(), x2.max())
 
-    plt.plot(x1, y, c='navy', label='X1 xmap X2')
-    plt.plot(x2, z, c='red', label='X2 xmap X1')
+    plt.plot(x1,
+             y,
+             c='navy',
+             label=f'{variable_names[0]} xmap {variable_names[1]}')
+    plt.plot(x2,
+             z,
+             c='red',
+             label=f'{variable_names[1]} xmap {variable_names[0]}')
     if surrogates:
         plt.fill_between(x1, y_5, y_95, color='navy', alpha=.3)
         plt.fill_between(x2, z_5, z_95, color='red', alpha=.3)

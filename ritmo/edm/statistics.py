@@ -4,6 +4,7 @@ import numpy as np
 from scipy.stats import norm as nm
 from ritmo.utils import read_pickle
 import pandas as pd
+from typing import Tuple
 
 
 def z_transform(xy, ab, n, n2=None, twotailed=False):
@@ -63,12 +64,15 @@ def surrogates_test(surr_results, y, z, var1, var2):
     return skill_above_surr_y1, skill_above_surr_y2
 
 
-def edm_statistics(save_path: str, surrogates: bool):
+def edm_statistics(save_path: str, surrogates: bool,
+                   variable_names: Tuple[str, str]):
     """Runs statistics for EDM model"""
+    y1_y2 = f"{variable_names[0]}-{variable_names[1]}"
+    y2_y1 = f"{variable_names[1]}-{variable_names[0]}"
     df = pd.DataFrame(columns=[
-        'Kendall X1-X2', 'Kendall X2-X1', 'Fisher X1-X2', 'Fisher X2-X1',
-        'Significant surrogate skill X1-X2',
-        'Significant surrogate skill X2-X1'
+        f'Kendall {y1_y2}', f'Kendall {y2_y1}', f'Fisher {y1_y2}',
+        f'Fisher {y2_y1}', f'Significant surrogate skill {y1_y2}',
+        f'Significant surrogate skill {y2_y1}'
     ])
 
     results_path = os.path.join(save_path, "results")
@@ -89,18 +93,19 @@ def edm_statistics(save_path: str, surrogates: bool):
     else:
         skill_above_surr_y1, skill_above_surr_y2 = ["N/A"] * 2
 
+    sig_fn = lambda x: '*' if x else ''
     df = df.append(
         {
-            'Kendall X1-X2':
-            f'{round(tau_y1_y2, 4)} ({round(p_y1_y2, 4)}{"*" if p_y1_y2<0.05 and tau_y1_y2 > 0 else ""})',
-            'Kendall X2-X1':
-            f'{round(tau_y2_y1, 4)} ({round(p_y2_y1, 4)}{"*" if p_y2_y1<0.05 and tau_y2_y1 > 0 else ""})',
-            'Fisher X1-X2':
-            f'{round(z_y1_y2, 4)} ({round(zp_y1_y2, 4)}{"*" if zp_y1_y2<0.05 else ""})',
-            'Fisher X2-X1':
-            f'{round(z_y2_y1, 4)} ({round(zp_y2_y1, 4)}{"*" if zp_y2_y1<0.05 else ""})',
-            'Significant surrogate skill X1-X2': str(skill_above_surr_y1),
-            'Significant surrogate skill X2-X1': str(skill_above_surr_y2)
+            f'Kendall {y1_y2}':
+            f'{tau_y1_y2:.4f} ({p_y1_y2:.4f}{sig_fn(p_y1_y2<0.05 and tau_y1_y2 > 0)})',
+            f'Kendall {y2_y1}':
+            f'{tau_y2_y1:.4f} ({p_y2_y1:.4f}{sig_fn(p_y2_y1<0.05 and tau_y2_y1 > 0)})',
+            f'Fisher {y1_y2}':
+            f'{z_y1_y2:.4f} ({zp_y1_y2:.4f}{sig_fn(zp_y1_y2<0.05)})',
+            f'Fisher {y2_y1}':
+            f'{z_y2_y1:.4f} ({zp_y2_y1:.4f}{sig_fn(zp_y2_y1<0.05)})',
+            f'Significant surrogate skill {y1_y2}': str(skill_above_surr_y1),
+            f'Significant surrogate skill {y2_y1}': str(skill_above_surr_y2)
         },
         ignore_index=True)
 

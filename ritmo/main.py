@@ -32,9 +32,9 @@ class Ritmo:
         y2: numpy array of float or int
             Array of values for second timeseries
         x1: numpy array of float or int
-            Array of UNIX timestamps associated with y1 values
+            Array of UNIX timestamps (in milliseconds) associated with y1 values
         x2: numpy array of float or int (default = None)
-            Array of UNIX timestamps associated with y2 values
+            Array of UNIX timestamps (in milliseconds) associated with y2 values
             If set to None, x2 is set to x1
         resample_method: dictionary (default = None, which uses mean resample method)
             Specified resampling methods for y1 and y2
@@ -48,6 +48,10 @@ class Ritmo:
             If set to None, UUID for the dataset will be generated.
         save_plots: bool (default = True)
             Whether to save plots or not
+        y1_name: str (default 'Y1')
+            Name of the X1 variable / first timeseries signal
+        y2_name: str (default 'Y2')
+            Name of the X2 variable / second timeseries signal
     """
     def __init__(self,
                  y1: tsrs_vtype,
@@ -57,7 +61,9 @@ class Ritmo:
                  resample_method: Optional[Mapping[str, str]] = None,
                  save_path: str = '.',
                  dataset_name: Optional[str] = None,
-                 save_plots: bool = True) -> None:
+                 save_plots: bool = True,
+                 y1_name: str = 'Y1',
+                 y2_name: str = 'Y2') -> None:
 
         if dataset_name is None:
             dataset_name = str(uuid.uuid4())
@@ -72,6 +78,7 @@ class Ritmo:
         self.tsrs_2_filtered = None
         self.overlapping_cycles = None
         self.filtered_noise = None
+        self.variable_names = (y1_name, y2_name)
         os.makedirs(os.path.join(self.save_path, "results"), exist_ok=True)
         os.makedirs(os.path.join(self.save_path, "figures"), exist_ok=True)
 
@@ -99,7 +106,7 @@ class Ritmo:
                 )
             y1_rs, y2_rs = resample_method['y1'], resample_method['y2']
         else:
-            y1_rs, y2_rs = ['mean'] * 2 # defaults to mean
+            y1_rs, y2_rs = ['mean'] * 2  # defaults to mean
 
         # check for x2
         if x2 is None:
@@ -124,13 +131,15 @@ class Ritmo:
         self.tsrs_2 = process_data(self.x2, self.y2, freq='1H', method=y2_rs)
         self._check_start_end_times()
 
-        if len(self.tsrs_1) < MIN_DAYS * 24 or len(self.tsrs_2) < MIN_DAYS * 24:
+        if len(self.tsrs_1) < MIN_DAYS * 24 or len(
+                self.tsrs_2) < MIN_DAYS * 24:
             raise ValueError(
                 f"Timeseries overlap is less than {MIN_DAYS} days.")
 
         # plot moving averages
         if self.save_plots:
-            timeseries_plot(self.tsrs_1, self.tsrs_2, self.save_path)
+            timeseries_plot(self.tsrs_1, self.tsrs_2, self.save_path,
+                            self.variable_names)
 
     def run(self):
         """Runs all RITMO code and produces table"""
@@ -142,14 +151,15 @@ class Ritmo:
         sig_fn = lambda x: '*' if x else ''
         # Build table
         table = pd.DataFrame(columns=[
-            'X1 period (days)', 'X2 period (days)', 'PLV', 'PLV Noise',
+            f'{self.variable_names[0]} period (days)',
+            f'{self.variable_names[1]} period (days)', 'PLV', 'PLV Noise',
             'MI (lag 0)', 'MI max', 'MI random'
         ])
         for (peak1, peak2), (_, plv, plv_noise) in plv_all_cycles.items():
 
             (mi_vals, lags, mi_random) = mi_all_cycles[(peak1, peak2)]
             max_mi = np.max(mi_vals)
-            max_mi_lag = lags[np.where(mi_vals == max_mi)[0]]
+            max_mi_lag = lags[np.where(mi_vals == max_mi)[0]][0]
 
             # Significance
             mi_0_sig = sig_fn(mi_vals[0] > mi_random)
@@ -158,14 +168,16 @@ class Ritmo:
 
             table = table.append(
                 {
-                    'X1 period (days)': round(peak1 / 24, 1),
-                    'X2 period (days)': round(peak2 / 24, 1),
-                    'PLV': f'{round(plv, 4)}{plv_sig}',
-                    'PLV Noise': round(plv_noise, 4),
-                    'MI (lag 0)': f'{round(mi_vals[0], 4)}{mi_0_sig}',
+                    f'{self.variable_names[0]} period (days)':
+                    f"{peak1/24:.1f}",
+                    f'{self.variable_names[1]} period (days)':
+                    f"{peak2/24:.1f}",
+                    'PLV': f'{plv:.4f}{plv_sig}',
+                    'PLV Noise': f'{plv_noise:.4f}',
+                    'MI (lag 0)': f'{mi_vals[0]:.4f}{mi_0_sig}',
                     'MI max':
-                    f'{round(max_mi, 4)}{mi_max_sig} (lag {round(max_mi_lag[0])})',
-                    'MI random': round(mi_random, 4),
+                    f'{max_mi:.4f}{mi_max_sig} (lag {max_mi_lag:.0f})',
+                    'MI random': f'{mi_random:.4f}',
                 },
                 ignore_index=True)
         table.to_csv(
@@ -173,11 +185,20 @@ class Ritmo:
 
         self.run_edm()
 
-    def run_edm(self, surrogates: bool = True):
+    def run_edm(self,
+                surrogates: bool = True,
+                use_existing_surrogates: bool = False):
         """
         Runs pyEDM module on dataset and generates surrogates
         in accordance with input varaibles.
         Default is to generate 100 surrogates.
+        Parameters
+        ------------
+            surrogates: bool (default True)
+                Toggle to generate surrogates
+            use_existing_surrogates: bool (default False)
+                Toggle to look for existing surrogates in results folder
+                Useful variable in cases where script termiates early
         """
 
         # run EDM on timeseries
@@ -194,7 +215,7 @@ class Ritmo:
         if surrogates:
             surr_path = os.path.join(self.save_path, "results",
                                      "surrogates.pickle")
-            if os.path.exists(surr_path):
+            if use_existing_surrogates and os.path.exists(surr_path):
                 [y1_xmap_y2_surr, y2_xmap_y1_surr] = read_pickle(surr_path)
                 start_from = len(y1_xmap_y2_surr)
             else:
@@ -213,10 +234,10 @@ class Ritmo:
 
         # Figure
         if self.save_plots:
-            edm_figure(self.save_path, surrogates)
+            edm_figure(self.save_path, surrogates, self.variable_names)
 
         # EDM statistics
-        edm_statistics(self.save_path, surrogates)
+        edm_statistics(self.save_path, surrogates, self.variable_names)
 
     def run_plv(self):
         """
@@ -251,7 +272,7 @@ class Ritmo:
                     plot_phase_synchony(self.tsrs_1_filtered,
                                         self.tsrs_2_filtered, peak1, i,
                                         phase_synchrony, plv, plv_sig,
-                                        self.save_path)
+                                        self.save_path, self.variable_names)
 
         return plv_all_cycles
 
@@ -274,7 +295,8 @@ class Ritmo:
                 mi_random = stats_random(self.filtered_noise, peak1, i)
                 if self.save_plots:
                     plot_mutual_information(peak1, i, mi_vals, lags, mi_random,
-                                            self.save_path)
+                                            self.save_path,
+                                            self.variable_names)
                 mi_all_cycles[(peak1, i)] = (mi_vals, lags, mi_random)
 
         return mi_all_cycles
@@ -303,7 +325,7 @@ class Ritmo:
 
         if self.save_plots:
             wavelet_plot(wavelet_df1, wavelet_df2, self.overlapping_cycles,
-                         self.save_path)
+                         self.save_path, self.variable_names)
 
     def _check_start_end_times(self):
         """
